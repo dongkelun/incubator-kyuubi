@@ -284,11 +284,13 @@ abstract class SessionManager(name: String) extends CompositeService(name) {
   private[kyuubi] def startTerminatingChecker(stop: () => Unit): Unit = if (!isServer) {
     // initialize `_latestLogoutTime` at start
     _latestLogoutTime = System.currentTimeMillis()
+    // 默认一分钟
     val interval = conf.get(ENGINE_CHECK_INTERVAL)
     val idleTimeout = conf.get(ENGINE_IDLE_TIMEOUT)
     if (idleTimeout > 0) {
       val checkTask = new Runnable {
         override def run(): Unit = {
+          // 当前时间-上次登录时间>idleTimeout
           if (!shutdown && System.currentTimeMillis() - latestLogoutTime > idleTimeout &&
             getOpenSessionCount <= 0) {
             info(s"Idled for more than $idleTimeout ms, terminating")
@@ -296,6 +298,7 @@ abstract class SessionManager(name: String) extends CompositeService(name) {
           }
         }
       }
+      // 每一分钟检查一次
       timeoutChecker.scheduleWithFixedDelay(checkTask, interval, interval, TimeUnit.MILLISECONDS)
     }
   }
